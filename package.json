@@ -1,0 +1,28 @@
+{
+  "name": "AlchemixMoneyStreaming",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Biddls",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@tenderly/hardhat-tenderly": "^1.0.12",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.4.4",
+    "hardhat": "^2.6.0",
+    "hardhat-gas-reporter": "^1.0.4",
+    "solidity-coverage": "^0.7.16"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.0",
+    "@openzeppelin/test-helpers": "^0.5.13",
+    "hardhat-spdx-license-identifier": "^2.0.3"
+  }
+}
