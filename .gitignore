@@ -4,3 +4,5 @@
 /.idea/
 /.git/
 /contracts/@openzeppelin/
+coverage.json
+/coverage/
