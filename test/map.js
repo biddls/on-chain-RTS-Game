@@ -18,6 +18,10 @@ describe("ALCX_map", function () {
 
     describe("Token contract setup", async function () {
         it("Deployment checks", async function () {
+            // map checks
+            expect (await vars.map.nextX()).to.equal(1);
+            expect (await vars.map.nextY()).to.equal(0);
+            expect (await vars.map.radius()).to.equal(2);
         });
     });
 });

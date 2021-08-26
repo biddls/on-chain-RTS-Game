@@ -1,14 +1,16 @@
+//SPDX-License-Identifier: UNLICENSED
+
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-
-contract ALCX_map is ERC721PresetMinterPauserAutoId{
-    // tile / map admin stuff
-    // amount of dead tiles
-    uint256 public deadTiles;
+contract ALCX_map{
+    ERC721PresetMinterPauserAutoId public mapNFTs =
+    new ERC721PresetMinterPauserAutoId(
+        "Alchemix DAOs map", "ALC MAP", "");
+    address public mapNFTAddr = address(mapNFTs);
 
     // struct that holds basic info about a tile
     struct tile {
@@ -26,11 +28,20 @@ contract ALCX_map is ERC721PresetMinterPauserAutoId{
     uint256 public nextY = 0;
     uint256 public radius = 1;
 
+    // tile / map admin stuff
+    // amount of dead tiles
+    uint256 public deadTiles;
+
     //admin stuff
     address public DAO_nft_Token;
+    address public admin;
 
-    constructor() ERC721PresetMinterPauserAutoId("Alchemix DAOs map", "ALC MAP", ""){
+    // local var mapping
+    mapping(uint8 => bool) internal _numberLookup;
+
+    constructor() {
         _addLand(msg.sender, 2**256 -1);
+        admin = msg.sender;
     }
 
     // map functions
@@ -56,9 +67,9 @@ contract ALCX_map is ERC721PresetMinterPauserAutoId{
     */
     function _addLand(address _for, uint256 _id) internal {
         // spawns the live tile
-        map[nextX][nextY] = tile(_id, totalSupply(), false, 0);
+        map[nextX][nextY] = tile(_id, mapNFTs.totalSupply(), false, 0);
         // fills in the ID to XY look up mapping
-        IDtoXY[totalSupply()] = [nextX, nextY];
+        IDtoXY[mapNFTs.totalSupply()] = [nextX, nextY];
         // if directly in line with the 0,0 block
         if(nextX == 0){
             // move to (radius,0)
@@ -73,7 +84,7 @@ contract ALCX_map is ERC721PresetMinterPauserAutoId{
             nextX--;
         }
         // create a land tile ERC-721 NFT
-        mint(_for);
+        mapNFTs.mint(_for);
     }
 
     // marks a tile as dead the NFT owner can still hold onto the now useless tile
@@ -86,32 +97,34 @@ contract ALCX_map is ERC721PresetMinterPauserAutoId{
 
     // admin
     // abstraction function to move the dao NFTs
-    function _batchedFromToDAONFT(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) internal {
-        (bool success) =
+    function _batchedFromToDAONFT(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory _data) internal {
+        (bool success, bytes memory data) =
         address(DAO_nft_Token).call(
             abi.encodePacked(
                 IERC1155.safeBatchTransferFrom.selector,
-                abi.encode(from, to, ids, amounts, data)));
+                abi.encode(from, to, ids, amounts, _data)));
 
         require(success, "Transfer of NFTs not successful");
+        emit batchedFromToDAONFT(data);
     }
 
     // abstraction function to move a dao NFT
-    function _fromToDAONFT(address from, address to, uint256 id, uint256 amount, bytes memory data) internal {
-        (bool success) =
+    function _fromToDAONFT(address from, address to, uint256 id, uint256 amount, bytes memory _data) internal {
+        (bool success, bytes memory data) =
         address(DAO_nft_Token).call(
             abi.encodePacked(
                 IERC1155.safeTransferFrom.selector,
-                abi.encode(from, to, id, amount, data)));
+                abi.encode(from, to, id, amount, _data)));
 
         require(success, "Transfer of NFTs not successful");
+        emit fromToDAONFT(data);
     }
 
     // magic functions
     // reinforces land by staking NFTs to protect it
     function increaseLandsProtection(uint256 _x, uint256 _y, uint256 _amount) external {
         require(_amount != 0, "can't send 0 NFTs");
-        require(ownerOf(map[_x][_y].index) == msg.sender, "address doesn't own account");
+        require(mapNFTs.ownerOf(map[_x][_y].index) == msg.sender, "address doesn't own account");
 
         _fromToDAONFT(msg.sender, address(this), map[_x][_y].ALCX_DAO_NFT_ID, _amount, "");
 
@@ -121,7 +134,7 @@ contract ALCX_map is ERC721PresetMinterPauserAutoId{
     // removes NFTs from land
     function decreaseLandsProtection(uint256 _x, uint256 _y, uint256 _amount) external {
         require(_amount != 0, "can't send 0 NFTs");
-        require(ownerOf(map[_x][_y].index) == msg.sender, "address doesn't own account");
+        require(mapNFTs.ownerOf(map[_x][_y].index) == msg.sender, "address doesn't own account");
         require(map[_x][_y].NFTProtection >= _amount, "Not enough NFTs on tile");
 
         _fromToDAONFT(address(this), msg.sender, map[_x][_y].ALCX_DAO_NFT_ID, _amount, "");
@@ -173,21 +186,22 @@ contract ALCX_map is ERC721PresetMinterPauserAutoId{
         uint256 _y1Removed,
         uint256 _x2Start,
         uint256 _y2Start)
-    internal pure returns
+    internal returns
     (bool) {
         // generates dead map and list of live tiles
         //both tiles are alive
         require(!map[_x1Removed][_y1Removed].dead && !map[_x2Start][_y2Start].dead);
         // false is dead
-        bool[3][3] _tempMap;
+        bool[3][3] memory _tempMap;
         // instead of X,Y use a number (0-8) anti-clockwise spiraling in from 0,0 to 1,1 see `spots`
-        mapping(uint => bool) _numberLookup;
         _tempMap[1][1] = true;
-        uint [8][2] spots = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1]];
-        uint _startNumb;
-        uint _alive;
+        uint8 [2][8] memory spots = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1]];
+        uint8 _startNumb;
+        uint8 _alive;
         // converts the soon to die square to the center of a 3X3 array
-        for(i=0; i<spots.length; i++){
+        for(uint8 i=0; i<spots.length; i++){
+            // cleaning the previous _numberLookup
+            _numberLookup[i] = false;
             // anything that falls off the edge gets looped around to a max int position
             // that would need 2^(255*2) NFTs to be withdrawn to get to
             // so now its querying a dead tile that wont ever reasonably get reached
@@ -196,7 +210,7 @@ contract ALCX_map is ERC721PresetMinterPauserAutoId{
 
             // if the tile it looks at is dead it adds it to the list
             // and then goes to the next tile in `spots`
-            if(!map[_shiftedX][_shiftedY].dead){dead++; continue;}
+            if(!map[_shiftedX][_shiftedY].dead){continue;}
 
             // if it passes all of that its now true
             _tempMap[spots[i][0]][spots[i][1]] = true;
@@ -219,8 +233,8 @@ contract ALCX_map is ERC721PresetMinterPauserAutoId{
         // and if we dont reach all of the alive squares then going through the dead center square
         // must be the only option to get to them thus it can be destroyed
         // data is stored for the graph like 0:[1,8] but we can remove 0 and just use its index boi
-        uint [8][2] _transitions = [[1, 8], [2, 3], [3, 8], [4, 5], [5, 8], [6, 7], [7, 8], [0, 1]];
-        uint [8][2] _transitionsClock = [[7, 8], [0, 7], [1, 8], [2, 1], [3, 8], [4, 3], [5, 8], [0, 1]];
+        uint8 [2][8] memory _transitions = [[1, 8], [2, 3], [3, 8], [4, 5], [5, 8], [6, 7], [7, 8], [0, 1]];
+        uint8 [2][8] memory _transitionsClock = [[7, 8], [0, 7], [1, 8], [2, 1], [3, 8], [4, 3], [5, 8], [0, 1]];
 
         // both on the anti-clockwise side are dead look clockwise
         if(!_numberLookup[_transitionsClock[_startNumb][0]] && !_numberLookup[_transitionsClock[_startNumb][1]]){
@@ -228,19 +242,21 @@ contract ALCX_map is ERC721PresetMinterPauserAutoId{
         }
 
         // keeps track to make sure that we have seen all the points we need to
-        uint _visited = 1;
+        uint8 _visited = 1;
         // not needed could just use _startNumb but makes it easier to look through
-        uint _nextNumb = _startNumb;
+        uint8 _nextNumb = _startNumb;
         // holds the pair of data for it to look through
-        uint[2] _temp;
-        for(i=0;i<_alive; i++){
-            _temp = _transitions[_nextNumb];
-            if(_numberLookup(_temp[0])){ //chooses to look at closes number first (not diagonal)
-                _nextNumb = _temp[0];
+        uint8 _temp0;
+        uint8 _temp1;
+        for(uint8 i=0;i<_alive; i++){
+            _temp0 = _transitions[_nextNumb][0];
+            _temp1 = _transitions[_nextNumb][1];
+            if(_numberLookup[_temp0]){ //chooses to look at closes number first (not diagonal)
+                _nextNumb = _temp0;
                 _visited++;
-            } else if (_numberLookup(_temp[1])){ // then looks at diagonal
+            } else if (_numberLookup[_temp1]){ // then looks at diagonal
                 // (or the center one as it had to fill out the array)
-                _nextNumb = _temp[1];
+                _nextNumb = _temp1;
                 _visited++;
             } else {
                 return (false);
@@ -276,4 +292,27 @@ contract ALCX_map is ERC721PresetMinterPauserAutoId{
     function _underflowSub(uint256 a, uint256 b) internal pure returns (uint256){
         return a < b ? (((2 ^ 256) -1 ) -b) : (a - b);
     }
+
+    function DAO_nft_TokenChange(address _to) external {
+        require(msg.sender == admin);
+        require(_to != address(0));
+        DAO_nft_Token = _to;
+    }
+
+    function adminChange(address _to) external {
+        require(msg.sender == admin);
+        require(_to != address(0));
+        admin = _to;
+    }
+
+    function mapNFTsAdd() external view returns (address) {
+        return address(mapNFTs);
+    }
+
+    event batchedFromToDAONFT(
+        bytes data
+    );
+    event fromToDAONFT(
+        bytes data
+    );
 }
