@@ -185,7 +185,7 @@ contract ALCX_map is ERC1155Holder{
     (bool) {
         // generates dead map and list of live tiles
         //both tiles are alive
-        require(!map[_x1Removed][_y1Removed].dead && !map[_x2Start][_y2Start].dead);
+        require(!map[_x1Removed][_y1Removed].dead && !map[_x2Start][_y2Start].dead, "both tiles must be aliive");
         // false is dead
         bool[3][3] memory _tempMap;
         // instead of X,Y use a number (0-8) anti-clockwise spiraling in from 0,0 to 1,1 see `spots`
@@ -263,12 +263,12 @@ contract ALCX_map is ERC1155Holder{
     function _isStart(
         uint256 _x,
         uint256 _y,
-        uint256 _x2Start,
-        uint256 _y2Start,
         uint256 _x1Removed,
-        uint256 _y1Removed)
+        uint256 _y1Removed,
+        uint256 _x2Start,
+        uint256 _y2Start)
     internal pure returns (bool) {
-        return ((((_x2Start + 1) - _x1Removed) == _x) && (((_y2Start + 1) - _y1Removed) == _y));
+        return (((_x2Start) - (_x1Removed - 1) == _x) && ((_y2Start) - (_y1Removed - 1) == _y));
     }
 
     // Chebyshev distance

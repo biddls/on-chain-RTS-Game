@@ -4,22 +4,22 @@ const testing = async function() {
     const balance = await owner.getBalance();
 
     let contract = await ethers.getContractFactory("ALCX_map");
-    const map = await contract.deploy();
+    const mapCont = await contract.deploy();
 
 
 
     contract = await ethers.getContractFactory("ERC721PresetMinterPauserAutoId");
     const mapNFT = await contract.attach(
-        await map.mapNFTAddr()// The deployed contract address
+        await mapCont.mapNFTAddr()// The deployed contract address
     );
 
     contract = await ethers.getContractFactory("ERC1155PresetMinterPauser");
     const alcDao = await contract.deploy("");
 
-    map.DAO_nft_TokenChange(alcDao.address);
+    mapCont.DAO_nft_TokenChange(alcDao.address);
 
     return {
-        map,
+        mapCont,
         mapNFT,
         alcDao,
         balance,
