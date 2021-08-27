@@ -3,10 +3,10 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+import "@openzeppelin/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
-contract ALCX_map{
+contract ALCX_map is ERC1155Holder{
     ERC721PresetMinterPauserAutoId public mapNFTs =
     new ERC721PresetMinterPauserAutoId(
         "Alchemix DAOs map", "ALC MAP", "");
@@ -33,6 +33,7 @@ contract ALCX_map{
     uint256 public deadTiles;
 
     //admin stuff
+    ERC1155PresetMinterPauser internal alcDao;
     address public DAO_nft_Token;
     address public admin;
 
@@ -98,26 +99,12 @@ contract ALCX_map{
     // admin
     // abstraction function to move the dao NFTs
     function _batchedFromToDAONFT(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory _data) internal {
-        (bool success, bytes memory data) =
-        address(DAO_nft_Token).call(
-            abi.encodePacked(
-                IERC1155.safeBatchTransferFrom.selector,
-                abi.encode(from, to, ids, amounts, _data)));
-
-        require(success, "Transfer of NFTs not successful");
-        emit batchedFromToDAONFT(data);
+        alcDao.safeBatchTransferFrom(from, to, ids, amounts, _data);
     }
 
     // abstraction function to move a dao NFT
     function _fromToDAONFT(address from, address to, uint256 id, uint256 amount, bytes memory _data) internal {
-        (bool success, bytes memory data) =
-        address(DAO_nft_Token).call(
-            abi.encodePacked(
-                IERC1155.safeTransferFrom.selector,
-                abi.encode(from, to, id, amount, _data)));
-
-        require(success, "Transfer of NFTs not successful");
-        emit fromToDAONFT(data);
+        alcDao.safeTransferFrom(from, to, id, amount, _data);
     }
 
     // magic functions
@@ -144,7 +131,7 @@ contract ALCX_map{
 
     function magicAttack(uint256 _attackX, uint256 _attackY, uint256 _fromX, uint256 _fromY, uint256 _amount) external {
 //        make sure that defending land boarders the attackers land
-        require(_attackX != _fromX && _attackY == _fromY, "cant attack your self");
+        require(_attackX != _fromX || _attackY != _fromY, "cant attack your self");
         require(_distance(_attackX, _attackY, _fromX, _fromY) == 1, "Too far away");
 
         // add checks here to make sure the whole map stays connected
@@ -154,7 +141,7 @@ contract ALCX_map{
         _fromToDAONFT(msg.sender, address(this), map[_attackX][_attackY].ALCX_DAO_NFT_ID, _amount, "");
         // see who wins
         // if defender wins subtract protection from attackers force
-        if(_amount > map[_attackX][_attackY].NFTProtection) {
+        if(_amount < map[_attackX][_attackY].NFTProtection) {
             // burn all attackers NFTs
             // burn defenders - attacks NFTs
             /*
@@ -166,10 +153,16 @@ contract ALCX_map{
             _fromToDAONFT(address(this), address(1),
                 map[_attackX][_attackY].ALCX_DAO_NFT_ID,
                 map[_attackX][_attackY].NFTProtection * 2, "");
+            /*
+            may not burn nfts and instead will sell them for alcx for it to stake in the dao
+            */
+            // reduce the amount of protection
+            map[_attackX][_attackY].NFTProtection = map[_attackX][_attackY].NFTProtection - _amount;
         } // if defender looses destroy land and everything on it
         else {
             // burn all defenders NFTs
             // burn attacks - defenders NFTs
+            map[_attackX][_attackY].NFTProtection = 0;
             // see simplification math above ^^
             _fromToDAONFT(address(this), address(1),
                 map[_attackX][_attackY].ALCX_DAO_NFT_ID,
@@ -178,9 +171,11 @@ contract ALCX_map{
             // kill the land
             require(_mapStaysWhole(_attackX, _attackY, _fromX, _fromY));
             _killTile(_attackX, _attackY);
+
         }
     }
 
+    // checks
     function _mapStaysWhole(
         uint256 _x1Removed,
         uint256 _y1Removed,
@@ -277,11 +272,11 @@ contract ALCX_map{
     }
 
     // Chebyshev distance
-    function _distance(uint256 x1, uint256 x2, uint256 y1, uint256 y2) internal pure returns(uint256){
+    function _distance(uint256 x1, uint256 y1, uint256 x2, uint256 y2) internal pure returns(uint256){
         return _max(_diff(x1, x2), _diff(y1, y2));
     }
     function _diff(uint256 a, uint256 b) internal pure returns(uint256){
-        return _max(a, b) - _min(a, b);
+        return (_max(a, b) - _min(a, b));
     }
     function _max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a >= b ? a : b;
@@ -293,26 +288,19 @@ contract ALCX_map{
         return a < b ? (((2 ^ 256) -1 ) -b) : (a - b);
     }
 
+    // admin
     function DAO_nft_TokenChange(address _to) external {
         require(msg.sender == admin);
         require(_to != address(0));
         DAO_nft_Token = _to;
+        alcDao = ERC1155PresetMinterPauser(DAO_nft_Token);
     }
-
     function adminChange(address _to) external {
         require(msg.sender == admin);
         require(_to != address(0));
         admin = _to;
     }
-
-    function mapNFTsAdd() external view returns (address) {
+    function mapNFTsAddr() external view returns (address) {
         return address(mapNFTs);
     }
-
-    event batchedFromToDAONFT(
-        bytes data
-    );
-    event fromToDAONFT(
-        bytes data
-    );
 }
