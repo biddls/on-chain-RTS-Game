@@ -31,5 +31,7 @@ module.exports = {
     enabled: process.env.REPORT_GAS
   }
   // npx hardhat coverage
-  // https://forum.openzeppelin.com/t/test-smart-contracts-like-a-rockstar/1001
+
+  // npx hardhat node
+  // npx hardhat run --network localhost script/deploy.js
 };

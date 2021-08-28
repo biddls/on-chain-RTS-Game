@@ -5,3 +5,4 @@
 /contracts/@openzeppelin/
 coverage.json
 /coverage/
+yarn.lock
