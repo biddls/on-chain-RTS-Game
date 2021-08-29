@@ -16,8 +16,8 @@ contract DAO_mint {
     }
 
     function getNFTs(uint256[] memory _ids, uint256[] memory _amounts, bytes memory _data) external {
-        require(_ids.length == _amounts.length);
-        require(_amounts.length <= 5);
+        require(_ids.length == _amounts.length, "not equal length");
+        require(_amounts.length <= 5, "max id number is 4");
         uint256 _sum;
         for(uint8 i=0;i<_amounts.length;i++){
             _sum += _amounts[i];

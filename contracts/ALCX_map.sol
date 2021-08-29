@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
-contract ALCX_map is ERC1155Holder, AccessControl{
+contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     ERC721PresetMinterPauserAutoId public mapNFTs =
     new ERC721PresetMinterPauserAutoId(
         "Alchemix DAOs map", "ALC MAP", "");
@@ -316,7 +316,7 @@ contract ALCX_map is ERC1155Holder, AccessControl{
             revokeRole(MAP_CONTROL, _to);
         }
     }
-    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl, ERC1155Receiver) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155Receiver) returns (bool) {
         return interfaceId == type(IERC1155Receiver).interfaceId || super.supportsInterface(interfaceId);
     }
 }

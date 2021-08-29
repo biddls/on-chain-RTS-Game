@@ -14,7 +14,8 @@ async function main() {
     const DAO_mint = await contract.deploy("");
 
     mapCont.DAO_nft_TokenChange(alcDao.address);
-    DAO_mint.changeMapAddr(mapCont.address);
+    alcDao.grantRole(alcDao.MINTER_ROLE(), DAO_mint.address);
+    DAO_mint.changeDAOAddr(mapCont.address);
 
     console.log('const Map_Addr = "' + await mapCont.address + '"');
     console.log('const MapNFT_Addr = "' + await mapNFT.address + '"');
