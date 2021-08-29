@@ -5,8 +5,9 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
 import "@openzeppelin/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
-contract ALCX_map is ERC1155Holder{
+contract ALCX_map is ERC1155Holder, AccessControl{
     ERC721PresetMinterPauserAutoId public mapNFTs =
     new ERC721PresetMinterPauserAutoId(
         "Alchemix DAOs map", "ALC MAP", "");
@@ -35,14 +36,16 @@ contract ALCX_map is ERC1155Holder{
     //admin stuff
     ERC1155PresetMinterPauser internal alcDao;
     address public DAO_nft_Token;
-    address public admin;
+
+    // roles
+    bytes32 public constant MAP_CONTROL = keccak256("MAP_CONTROLLER");
 
     // local var mapping
     mapping(uint8 => bool) internal _numberLookup;
 
     constructor() {
         _addLand(msg.sender, 2**256 -1);
-        admin = msg.sender;
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     // map functions
@@ -290,17 +293,30 @@ contract ALCX_map is ERC1155Holder{
 
     // admin
     function DAO_nft_TokenChange(address _to) external {
-        require(msg.sender == admin);
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender));
         require(_to != address(0));
         DAO_nft_Token = _to;
         alcDao = ERC1155PresetMinterPauser(DAO_nft_Token);
     }
     function adminChange(address _to) external {
-        require(msg.sender == admin);
         require(_to != address(0));
-        admin = _to;
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender));
+        grantRole(DEFAULT_ADMIN_ROLE, _to);
+        revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
     function mapNFTsAddr() external view returns (address) {
         return address(mapNFTs);
+    }
+    function map_control_roll_control(bool _add, address _to) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender));
+        require(_to != address(0));
+        if(_add) {
+            grantRole(MAP_CONTROL, _to);
+        } else {
+            revokeRole(MAP_CONTROL, _to);
+        }
+    }
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl, ERC1155Receiver) returns (bool) {
+        return interfaceId == type(IERC1155Receiver).interfaceId || super.supportsInterface(interfaceId);
     }
 }

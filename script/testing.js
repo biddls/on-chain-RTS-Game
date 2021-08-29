@@ -16,12 +16,21 @@ const testing = async function() {
     contract = await ethers.getContractFactory("ERC1155PresetMinterPauser");
     const alcDao = await contract.deploy("");
 
+    contract = await ethers.getContractFactory("DAO_mint");
+    const DAO_mint = await contract.deploy();
+
+    // tells the map where the dao nfts are
     mapCont.DAO_nft_TokenChange(alcDao.address);
+    // lets the dao mint contract make nfts for testing
+    alcDao.grantRole(alcDao.MINTER_ROLE(), DAO_mint.address);
+    // tells the dao mint contract where the dao nfts are
+    DAO_mint.changeDAOAddr(alcDao.address);
 
     return {
         mapCont,
         mapNFT,
         alcDao,
+        DAO_mint,
         balance,
         owner,
         addr1,

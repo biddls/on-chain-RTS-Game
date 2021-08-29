@@ -44,7 +44,7 @@ describe("ALCX_map", function () {
             expect( await vars.mapCont.DAO_nft_Token()).to.equal(max_address);
 
             await vars.mapCont.adminChange(max_address);
-            expect( await vars.mapCont.admin()).to.equal(max_address);
+            expect( await vars.mapCont.hasRole(vars.mapCont.DEFAULT_ADMIN_ROLE(), max_address)).to.be.true;
         });
     });
     describe("adding new tiles", async function () {
