@@ -34,4 +34,4 @@ module.exports = {
 
   // npx hardhat node
   // npx hardhat run --network localhost script/deploy.js
-};
+};// yarn hardhat gen-interface <contract name>

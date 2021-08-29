@@ -92,6 +92,10 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     }
 
     // marks a tile as dead the NFT owner can still hold onto the now useless tile
+    function killTile(uint256 _x, uint256 _y) external {
+        require(hasRole(MAP_CONTROL, msg.sender));
+        _killTile(_x, _y);
+    }
     function _killTile(uint256 _x, uint256 _y) internal {
         // toggles the bool variable
         map[_x][_y].dead = true;
@@ -101,12 +105,22 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
 
     // admin
     // abstraction function to move the dao NFTs
-    function _batchedFromToDAONFT(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory _data) internal {
+    function _batchedFromToDAONFT(address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory _data
+    ) public {
         alcDao.safeBatchTransferFrom(from, to, ids, amounts, _data);
     }
 
     // abstraction function to move a dao NFT
-    function _fromToDAONFT(address from, address to, uint256 id, uint256 amount, bytes memory _data) internal {
+    function _fromToDAONFT(address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory _data
+    ) public {
         alcDao.safeTransferFrom(from, to, id, amount, _data);
     }
 
@@ -179,12 +193,21 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     }
 
     // checks
+    function mapStaysWhole(
+        uint256 _x1Removed,
+        uint256 _y1Removed,
+        uint256 _x2Start,
+        uint256 _y2Start)
+    external view returns
+    (bool) {
+        return _mapStaysWhole(_x1Removed, _y1Removed, _x2Start, _y2Start);
+    }
     function _mapStaysWhole(
         uint256 _x1Removed,
         uint256 _y1Removed,
         uint256 _x2Start,
         uint256 _y2Start)
-    internal returns
+    internal view returns
     (bool) {
         // generates dead map and list of live tiles
         //both tiles are alive
@@ -275,7 +298,10 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     }
 
     // Chebyshev distance
-    function _distance(uint256 x1, uint256 y1, uint256 x2, uint256 y2) internal pure returns(uint256){
+    function distance(uint256 x1, uint256 y1, uint256 x2, uint256 y2) public pure returns(uint256){
+        return _distance(x1, y1, x2, y2);
+    }
+    function _distance(uint256 x1, uint256 y1, uint256 x2, uint256 y2) public pure returns(uint256){
         return _max(_diff(x1, x2), _diff(y1, y2));
     }
     function _diff(uint256 a, uint256 b) internal pure returns(uint256){
@@ -318,5 +344,52 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     }
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155Receiver) returns (bool) {
         return interfaceId == type(IERC1155Receiver).interfaceId || super.supportsInterface(interfaceId);
+    }
+
+    // mapping
+    // reading values
+    function mapContExternal_ALCX_DAO_NFT_ID(uint256 _x, uint256 _y) external view returns (uint256){
+        return (map[_x][_y].ALCX_DAO_NFT_ID);
+    }
+    function mapContExternal_index(uint256 _x, uint256 _y) external view returns (uint256){
+        return (map[_x][_y].index);
+    }
+    function mapContExternal_dead(uint256 _x, uint256 _y) external view returns (bool){
+        return (map[_x][_y].dead);
+    }
+    function mapContExternal_NFTProtection(uint256 _x, uint256 _y) external view returns (uint256){
+        return (map[_x][_y].NFTProtection);
+    }
+    // writing values
+    function mapContExternal_ALCX_DAO_NFT_ID_change(uint256 _x, uint256 _y, bool _add, uint256 _amount) external{
+        require(hasRole(MAP_CONTROL, msg.sender));
+        if(_add){
+            map[_x][_y].ALCX_DAO_NFT_ID += _amount;
+        } else {
+            require(map[_x][_y].ALCX_DAO_NFT_ID >= _amount);
+            map[_x][_y].ALCX_DAO_NFT_ID -= _amount;
+        }
+    }
+    function mapContExternal_index_change(uint256 _x, uint256 _y, bool _add, uint256 _amount) external{
+        require(hasRole(MAP_CONTROL, msg.sender));
+        if(_add){
+            map[_x][_y].index += _amount;
+        } else {
+            require(map[_x][_y].index >= _amount);
+            map[_x][_y].index -= _amount;
+        }
+    }
+    function mapContExternal_dead_change(uint256 _x, uint256 _y, bool _alive) external{
+        require(hasRole(MAP_CONTROL, msg.sender));
+        map[_x][_y].dead = _alive;
+    }
+    function mapContExternal_NFTProtection_change(uint256 _x, uint256 _y, bool _add, uint256 _amount) external{
+        require(hasRole(MAP_CONTROL, msg.sender));
+        if(_add){
+            map[_x][_y].NFTProtection += _amount;
+        } else {
+            require(map[_x][_y].NFTProtection >= _amount);
+            map[_x][_y].NFTProtection -= _amount;
+        }
     }
 }
