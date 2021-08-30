@@ -51,7 +51,11 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     // map functions
     // allows people to send in their NFTs for land
     // this action is none revertible
-    function redeemNFTsForLand(uint256[] memory _ids, uint256[] memory _amounts) external {
+    function redeemNFTsForLand(
+        uint256[] memory _ids,
+        uint256[] memory _amounts
+    ) external {
+
         require(_ids.length > 0, "cant pass an empty array");
 
         _batchedFromToDAONFT(msg.sender, address(this), _ids, _amounts, "");
@@ -105,13 +109,14 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
 
     // admin
     // abstraction function to move the dao NFTs
-    function _batchedFromToDAONFT(address from,
+    function _batchedFromToDAONFT(
+        address from,
         address to,
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory _data
     ) public {
-        alcDao.safeBatchTransferFrom(from, to, ids, amounts, _data);
+        ERC1155PresetMinterPauser(DAO_nft_Token).safeBatchTransferFrom(from, to, ids, amounts, _data);
     }
 
     // abstraction function to move a dao NFT
@@ -121,7 +126,7 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
         uint256 amount,
         bytes memory _data
     ) public {
-        alcDao.safeTransferFrom(from, to, id, amount, _data);
+        ERC1155PresetMinterPauser(DAO_nft_Token).safeTransferFrom(from, to, id, amount, _data);
     }
 
     // magic functions
@@ -198,7 +203,7 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
         uint256 _y1Removed,
         uint256 _x2Start,
         uint256 _y2Start)
-    external view returns
+    external returns
     (bool) {
         return _mapStaysWhole(_x1Removed, _y1Removed, _x2Start, _y2Start);
     }
@@ -207,7 +212,7 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
         uint256 _y1Removed,
         uint256 _x2Start,
         uint256 _y2Start)
-    internal view returns
+    internal returns
     (bool) {
         // generates dead map and list of live tiles
         //both tiles are alive

@@ -11,11 +11,11 @@ async function main() {
     const alcDao = await contract.deploy("");
 
     contract = await ethers.getContractFactory("DAO_mint");
-    const DAO_mint = await contract.deploy("");
+    const DAO_mint = await contract.deploy();
 
-    mapCont.DAO_nft_TokenChange(alcDao.address);
-    alcDao.grantRole(alcDao.MINTER_ROLE(), DAO_mint.address);
-    DAO_mint.changeDAOAddr(mapCont.address);
+    await mapCont.DAO_nft_TokenChange(alcDao.address);
+    await alcDao.grantRole(alcDao.MINTER_ROLE(), DAO_mint.address);
+    await DAO_mint.changeDAOAddr(alcDao.address);
 
     console.log('const Map_Addr = "' + await mapCont.address + '"');
     console.log('const MapNFT_Addr = "' + await mapNFT.address + '"');

@@ -5,7 +5,8 @@ pragma solidity ^0.8.0;
 import "./interfaces/IERC_1155.sol";
 
 contract DAO_mint {
-    IERC_1155 public map;
+//    IERC_1155 public DAO_NFTS;
+    address internal DAO_NFTS_addr;
     uint256 public max_amount = 10;
     uint256 public max_id = 4;
     mapping(address => uint256) public max_NFT;
@@ -24,13 +25,13 @@ contract DAO_mint {
             require(_ids[i] <= max_id);
         }
         require((_sum + max_NFT[msg.sender]) <= 10);
-        map.mintBatch(msg.sender, _ids, _amounts, _data);
+        IERC_1155(DAO_NFTS_addr).mintBatch(msg.sender, _ids, _amounts, _data);
         max_NFT[msg.sender] += _sum;
     }
 
     function changeDAOAddr(address _to) external {
         require(msg.sender == admin);
         require(_to != address(0));
-        map = IERC_1155(_to);
+        DAO_NFTS_addr = _to;
     }
 }
