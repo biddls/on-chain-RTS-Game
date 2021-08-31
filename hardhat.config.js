@@ -10,7 +10,11 @@ module.exports = {
   networks: {
     hardhat: {
       initialBaseFeePerGas: 0
-    }
+    },
+    ropsten: {
+      url: ``,
+      accounts: [""],
+    },
   },
   solidity: {
     version: "0.8.7",
