@@ -6,4 +6,4 @@
 coverage.json
 /coverage/
 yarn.lock
-key.txt
+key.js

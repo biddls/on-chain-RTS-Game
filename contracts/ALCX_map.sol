@@ -1,11 +1,14 @@
 //SPDX-License-Identifier: UNLICENSED
-
+// https://ethereum.stackexchange.com/questions/72687/explanation-of-appending-selector-in-solidity-smart-contracts/72690
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
-import "@openzeppelin/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import {ERC721PresetMinterPauserAutoId} from "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
+import {ERC1155PresetMinterPauser} from "@openzeppelin/contracts/token/ERC1155/presets/ERC1155PresetMinterPauser.sol";
+import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import {ERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Receiver.sol";
+import {AccessControlEnumerable} from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import {Chebyshev_math} from "./Chebyshev_math.sol";
+import {mapChecks} from "./mapChecks.sol";
 
 contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     ERC721PresetMinterPauserAutoId public mapNFTs =
@@ -14,16 +17,20 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     address public mapNFTAddr = address(mapNFTs);
 
     // struct that holds basic info about a tile
-    struct tile {
+    struct Tile {
         uint256 ALCX_DAO_NFT_ID;
         uint256 index;
         bool dead;
         uint256 NFTProtection;
+        uint256 lastChange;
     }
+
+    // time delay
+    uint256 delay = 86400;
 
     // data that is used to run the map generation / data lookup
     // x -> y -> tile
-    mapping(uint256 => mapping(uint256 => tile)) public map;
+    mapping(uint256 => mapping(uint256 => Tile)) public map;
     mapping(uint256 => uint256[2]) public IDtoXY;
     uint256 public nextX = 0;
     uint256 public nextY = 0;
@@ -34,14 +41,14 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     uint256 public deadTiles;
 
     //admin stuff
-    ERC1155PresetMinterPauser internal alcDao;
+    ERC1155PresetMinterPauser internal alcDaoNFT;
     address public DAO_nft_Token;
 
     // roles
     bytes32 public constant MAP_CONTROL = keccak256("MAP_CONTROLLER");
 
     // local var mapping
-    mapping(uint8 => bool) internal _numberLookup;
+//    mapping(uint8 => bool) private _numberLookup;
 
     constructor() {
         _addLand(msg.sender, 2**256 -1);
@@ -51,10 +58,7 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     // map functions
     // allows people to send in their NFTs for land
     // this action is none revertible
-    function redeemNFTsForLand(
-        uint256[] memory _ids,
-        uint256[] memory _amounts
-    ) external {
+    function redeemNFTsForLand(uint256[] memory _ids, uint256[] memory _amounts) external {
 
         require(_ids.length > 0, "cant pass an empty array");
 
@@ -75,7 +79,7 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     */
     function _addLand(address _for, uint256 _id) internal {
         // spawns the live tile
-        map[nextX][nextY] = tile(_id, mapNFTs.totalSupply(), false, 0);
+        map[nextX][nextY] = Tile(_id, mapNFTs.totalSupply(), false, 0, block.timestamp - 86400);
         // fills in the ID to XY look up mapping
         IDtoXY[mapNFTs.totalSupply()] = [nextX, nextY];
         // if directly in line with the 0,0 block
@@ -109,26 +113,23 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
 
     // admin
     // abstraction function to move the dao NFTs
-    function _batchedFromToDAONFT(
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory _data
-    ) public {
-        ERC1155PresetMinterPauser(DAO_nft_Token).safeBatchTransferFrom(from, to, ids, amounts, _data);
+    function batchedFromToDAONFT(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory _data) public {
+        require(hasRole(MAP_CONTROL, msg.sender));
+        _batchedFromToDAONFT(from, to, ids, amounts, _data);
     }
-
+    function _batchedFromToDAONFT(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory _data) internal {
+        alcDaoNFT.safeBatchTransferFrom(from, to, ids, amounts, _data);
+    }
     // abstraction function to move a dao NFT
-    function _fromToDAONFT(address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory _data
-    ) public {
-        ERC1155PresetMinterPauser(DAO_nft_Token).safeTransferFrom(from, to, id, amount, _data);
+    function fromToDAONFT(address from, address to, uint256 id, uint256 amount, bytes memory _data) public {
+        require(hasRole(MAP_CONTROL, msg.sender));
+        _fromToDAONFT(from, to, id, amount, _data);
+    }
+    function _fromToDAONFT(address from, address to, uint256 id, uint256 amount, bytes memory _data) internal {
+        alcDaoNFT.safeTransferFrom(from, to, id, amount, _data);
     }
 
+    /*
     // magic functions
     // reinforces land by staking NFTs to protect it
     function increaseLandsProtection(uint256 _x, uint256 _y, uint256 _amount) external {
@@ -139,7 +140,8 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
 
         map[_x][_y].NFTProtection += _amount;
     }
-
+    */
+    /*
     // removes NFTs from land
     function decreaseLandsProtection(uint256 _x, uint256 _y, uint256 _amount) external {
         require(_amount != 0, "can't send 0 NFTs");
@@ -149,12 +151,12 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
         _fromToDAONFT(address(this), msg.sender, map[_x][_y].ALCX_DAO_NFT_ID, _amount, "");
 
         map[_x][_y].NFTProtection -= _amount;
-    }
-
+    }*/
+    /*
     function magicAttack(uint256 _attackX, uint256 _attackY, uint256 _fromX, uint256 _fromY, uint256 _amount) external {
 //        make sure that defending land boarders the attackers land
         require(_attackX != _fromX || _attackY != _fromY, "cant attack your self");
-        require(_distance(_attackX, _attackY, _fromX, _fromY) == 1, "Too far away");
+        require(Chebyshev_math.distance(_attackX, _attackY, _fromX, _fromY) == 1, "Too far away");
 
         // add checks here to make sure the whole map stays connected
         require(_mapStaysWhole(_attackX, _attackY, _fromX, _fromY), "Cant destroy that as it would separate the map");
@@ -166,18 +168,18 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
         if(_amount < map[_attackX][_attackY].NFTProtection) {
             // burn all attackers NFTs
             // burn defenders - attacks NFTs
-            /*
-            map[_attackX][_attackY].NFTProtection  * 2
-            this is because we burn all of the defenders and the same amount from the attacker
-            so just simplify it down to 2 lots the min amount because both sides loose
-            */
+
+            // map[_attackX][_attackY].NFTProtection  * 2
+            // this is because we burn all of the defenders and the same amount from the attacker
+            // so just simplify it down to 2 lots the min amount because both sides loose
+
             // change this to burn eventually
             _fromToDAONFT(address(this), address(1),
                 map[_attackX][_attackY].ALCX_DAO_NFT_ID,
                 map[_attackX][_attackY].NFTProtection * 2, "");
-            /*
-            may not burn nfts and instead will sell them for alcx for it to stake in the dao
-            */
+
+            // may not burn nfts and instead will sell them for alcx for it to stake in the dao
+
             // reduce the amount of protection
             map[_attackX][_attackY].NFTProtection = map[_attackX][_attackY].NFTProtection - _amount;
         } // if defender looses destroy land and everything on it
@@ -196,24 +198,24 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
 
         }
     }
+    */
 
     // checks
     function mapStaysWhole(
         uint256 _x1Removed,
         uint256 _y1Removed,
         uint256 _x2Start,
-        uint256 _y2Start)
-    external returns
-    (bool) {
+        uint256 _y2Start
+    ) external returns (bool) {
         return _mapStaysWhole(_x1Removed, _y1Removed, _x2Start, _y2Start);
     }
+
     function _mapStaysWhole(
         uint256 _x1Removed,
         uint256 _y1Removed,
         uint256 _x2Start,
-        uint256 _y2Start)
-    internal returns
-    (bool) {
+        uint256 _y2Start
+    ) internal view returns (bool) {
         // generates dead map and list of live tiles
         //both tiles are alive
         require(!map[_x1Removed][_y1Removed].dead && !map[_x2Start][_y2Start].dead, "both tiles must be aliive");
@@ -224,6 +226,7 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
         uint8 [2][8] memory spots = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1]];
         uint8 _startNumb;
         uint8 _alive;
+        bool[9] memory _numberLookup;
         // converts the soon to die square to the center of a 3X3 array
         for(uint8 i=0; i<spots.length; i++){
             // cleaning the previous _numberLookup
@@ -231,8 +234,8 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
             // anything that falls off the edge gets looped around to a max int position
             // that would need 2^(255*2) NFTs to be withdrawn to get to
             // so now its querying a dead tile that wont ever reasonably get reached
-            uint256 _shiftedX = _underflowSub(_x1Removed, spots[i][0]);
-            uint256 _shiftedY = _underflowSub(_y1Removed, spots[i][1]);
+            uint256 _shiftedX = Chebyshev_math._underflowSub(_x1Removed, spots[i][0]);
+            uint256 _shiftedY = Chebyshev_math._underflowSub(_y1Removed, spots[i][1]);
 
             // if the tile it looks at is dead it adds it to the list
             // and then goes to the next tile in `spots`
@@ -245,20 +248,21 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
             // counts number of alive tiles it sees
             _alive++;
 
-            if(_isStart(spots[i][0], spots[i][1], _x1Removed, _y1Removed, _x2Start, _y2Start)){
+            if(mapChecks._isStart(spots[i][0], spots[i][1], _x1Removed, _y1Removed, _x2Start, _y2Start)){
                 _startNumb = i;
             }
         }
         // if only 2 are dead the 3X3 can still be fully traversed
-        if(_alive > 6){return (true);}
-        if(_alive == 1){return (true);}
+        if(_alive > 6){return true;}
+        if(_alive == 1){return true;}
 
-        // linked list of numbers to visit (anti-)clockwise around the 1,1 square
-        // the logic follows that if ew can start from the attacking square (which we know is alive)
-        // then we can either search left or right around the dead center square
-        // and if we dont reach all of the alive squares then going through the dead center square
-        // must be the only option to get to them thus it can be destroyed
-        // data is stored for the graph like 0:[1,8] but we can remove 0 and just use its index boi
+        /* linked list of numbers to visit (anti-)clockwise around the 1,1 square
+        the logic follows that if ew can start from the attacking square (which we know is alive)
+        then we can either search left or right around the dead center square
+        and if we dont reach all of the alive squares then going through the dead center square
+        must be the only option to get to them thus it can be destroyed
+        data is stored for the graph like 0:[1,8] but we can remove 0 and just use its index boi
+        */
         uint8 [2][8] memory _transitions = [[1, 8], [2, 3], [3, 8], [4, 5], [5, 8], [6, 7], [7, 8], [0, 1]];
         uint8 [2][8] memory _transitionsClock = [[7, 8], [0, 7], [1, 8], [2, 1], [3, 8], [4, 3], [5, 8], [0, 1]];
 
@@ -285,41 +289,10 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
                 _nextNumb = _temp1;
                 _visited++;
             } else {
-                return (false);
+                return false;
             }
         }
-        return (true);
-    }
-
-    function _isStart(
-        uint256 _x,
-        uint256 _y,
-        uint256 _x1Removed,
-        uint256 _y1Removed,
-        uint256 _x2Start,
-        uint256 _y2Start)
-    internal pure returns (bool) {
-        return (((_x2Start) - (_x1Removed - 1) == _x) && ((_y2Start) - (_y1Removed - 1) == _y));
-    }
-
-    // Chebyshev distance
-    function distance(uint256 x1, uint256 y1, uint256 x2, uint256 y2) public pure returns(uint256){
-        return _distance(x1, y1, x2, y2);
-    }
-    function _distance(uint256 x1, uint256 y1, uint256 x2, uint256 y2) public pure returns(uint256){
-        return _max(_diff(x1, x2), _diff(y1, y2));
-    }
-    function _diff(uint256 a, uint256 b) internal pure returns(uint256){
-        return (_max(a, b) - _min(a, b));
-    }
-    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a >= b ? a : b;
-    }
-    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
-    }
-    function _underflowSub(uint256 a, uint256 b) internal pure returns (uint256){
-        return a < b ? (((2 ^ 256) -1 ) -b) : (a - b);
+        return true;
     }
 
     // admin
@@ -327,13 +300,17 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender));
         require(_to != address(0));
         DAO_nft_Token = _to;
-        alcDao = ERC1155PresetMinterPauser(DAO_nft_Token);
+        alcDaoNFT = ERC1155PresetMinterPauser(DAO_nft_Token);
     }
     function adminChange(address _to) external {
         require(_to != address(0));
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender));
         grantRole(DEFAULT_ADMIN_ROLE, _to);
         revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+    function changeDelay(uint256 _delay) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender));
+        delay = _delay;
     }
     function mapNFTsAddr() external view returns (address) {
         return address(mapNFTs);
@@ -347,8 +324,9 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
             revokeRole(MAP_CONTROL, _to);
         }
     }
-    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155Receiver) returns (bool) {
-        return interfaceId == type(IERC1155Receiver).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override(
+    AccessControlEnumerable, ERC1155Receiver) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 
     // mapping
@@ -373,15 +351,6 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
         } else {
             require(map[_x][_y].ALCX_DAO_NFT_ID >= _amount);
             map[_x][_y].ALCX_DAO_NFT_ID -= _amount;
-        }
-    }
-    function mapContExternal_index_change(uint256 _x, uint256 _y, bool _add, uint256 _amount) external{
-        require(hasRole(MAP_CONTROL, msg.sender));
-        if(_add){
-            map[_x][_y].index += _amount;
-        } else {
-            require(map[_x][_y].index >= _amount);
-            map[_x][_y].index -= _amount;
         }
     }
     function mapContExternal_dead_change(uint256 _x, uint256 _y, bool _alive) external{

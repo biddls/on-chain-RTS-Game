@@ -4,6 +4,8 @@ require("hardhat-gas-reporter");
 require('hardhat-spdx-license-identifier');
 require("hardhat-interface-generator");
 
+// import {ALCHEMY_API_KEY, ROPSTEN_PRIVATE_KEY} from "key.js";
+const { ALCHEMY_API_KEY, ROPSTEN_PRIVATE_KEY } = require("./key.js");
 
 module.exports = {
   defaultNetwork: "hardhat",
@@ -12,8 +14,8 @@ module.exports = {
       initialBaseFeePerGas: 0
     },
     ropsten: {
-      url: ``,
-      accounts: [""],
+      url: `https://eth-ropsten.alchemyapi.io/v2/${ALCHEMY_API_KEY}`,
+      accounts: [`0x${ROPSTEN_PRIVATE_KEY}`],
     },
   },
   solidity: {

@@ -10,7 +10,7 @@ function sleep(milliseconds) {
     while (Date.now() - start < milliseconds);
 }
 
-describe("ALCX_map", function () {
+describe("magic attack", function () {
 
     let vars;
 
@@ -39,29 +39,7 @@ describe("ALCX_map", function () {
             expect (await vars.alcDao.getRoleMember(await vars.alcDao.DEFAULT_ADMIN_ROLE(), 0)).
             to.equal(vars.owner.address);
         });
-        it("admin stuff", async function () {
-            await vars.mapCont.DAO_nft_TokenChange(max_address);
-            expect( await vars.mapCont.DAO_nft_Token()).to.equal(max_address);
-
-            await vars.mapCont.adminChange(max_address);
-            expect( await vars.mapCont.hasRole(vars.mapCont.DEFAULT_ADMIN_ROLE(), max_address)).to.be.true;
-        });
     });
-    describe("adding new tiles", async function () {
-        it("", async function () {
-            await vars.alcDao.mint(vars.owner.address, 0, 10, "0x");
-            await vars.alcDao.mint(vars.owner.address, 1, 10, "0x");
-            await vars.alcDao.setApprovalForAll(vars.mapCont.address, true);
-
-            await vars.mapCont.redeemNFTsForLand([0, 1],[1, 2]);
-
-            // map check
-            expect (await (await vars.mapCont.map(1, 0)).ALCX_DAO_NFT_ID).to.equal(0);
-            expect (await (await vars.mapCont.map(1, 1)).ALCX_DAO_NFT_ID).to.equal(1);
-            expect (await (await vars.mapCont.map(0, 1)).ALCX_DAO_NFT_ID).to.equal(1);
-        });
-    });
-    /*
     describe("map reinforcement", async function () {
         it("", async function () {
             await vars.alcDao.mint(vars.owner.address, 0, 10, "0x");
@@ -71,15 +49,15 @@ describe("ALCX_map", function () {
             await vars.mapCont.redeemNFTsForLand([0, 1],[1, 2]);
 
             // increaseLandsProtection
-            await vars.mapCont.increaseLandsProtection(1, 0, 2);
+            await vars.magic_attack.increaseLandsProtection(1, 0, 2);
             expect (await (await vars.mapCont.map(1, 0)).NFTProtection).to.equal(2);
 
             // decreaseLandsProtection
-            await vars.mapCont.decreaseLandsProtection(1, 0, 1);
+            await vars.magic_attack.decreaseLandsProtection(1, 0, 1);
             expect (await (await vars.mapCont.map(1, 0)).NFTProtection).to.equal(1);
-            await vars.mapCont.decreaseLandsProtection(1, 0, 1);
+            await vars.magic_attack.decreaseLandsProtection(1, 0, 1);
             expect (await (await vars.mapCont.map(1, 0)).NFTProtection).to.equal(0);
-            expect (vars.mapCont.decreaseLandsProtection(1, 0, 1))
+            expect (vars.magic_attack.decreaseLandsProtection(1, 0, 1))
                 .to.be.revertedWith("Not enough NFTs on tile");
         });
     });
@@ -94,18 +72,18 @@ describe("ALCX_map", function () {
             await vars.mapCont.connect(vars.addr1).redeemNFTsForLand([0],[1]);
 
             // increaseLandsProtection
-            await vars.mapCont.increaseLandsProtection(1, 0, 2);
+            await vars.magic_attack.increaseLandsProtection(1, 0, 2);
             expect (await (await vars.mapCont.map(1, 0)).NFTProtection).to.equal(2);
 
-            await vars.mapCont.connect(vars.addr1).increaseLandsProtection(1, 1, 3);
+            await vars.magic_attack.connect(vars.addr1).increaseLandsProtection(1, 1, 3);
             expect (await (await vars.mapCont.map(1, 1)).NFTProtection).to.equal(3);
 
             // magic attack and fail
-            await vars.mapCont.magicAttack(1, 1, 1, 0, 2);
+            await vars.magic_attack.magicAttack(1, 1, 1, 0, 2);
             expect (await (await vars.mapCont.map(1, 1)).NFTProtection).to.equal(1);
 
             // magic attack and kill
-            await vars.mapCont.magicAttack(1, 1, 1, 0, 2);
+            await vars.magic_attack.magicAttack(1, 1, 1, 0, 2);
             expect (await (await vars.mapCont.map(1, 1)).NFTProtection).to.equal(0);
             expect (await (await vars.mapCont.map(1, 1)).dead).to.be.true;
         });
@@ -118,11 +96,11 @@ describe("ALCX_map", function () {
             await vars.mapCont.redeemNFTsForLand([0],[4]);
             await vars.mapCont.connect(vars.addr1).redeemNFTsForLand([0], [4]);
 
-            await vars.mapCont.magicAttack(0, 2, 0, 1, 1);
-            await vars.mapCont.magicAttack(1, 2, 0, 1, 1);
-            await vars.mapCont.magicAttack(2, 1, 2, 0, 1);
+            await vars.magic_attack.magicAttack(0, 2, 0, 1, 1);
+            await vars.magic_attack.magicAttack(1, 2, 0, 1, 1);
+            await vars.magic_attack.magicAttack(2, 1, 2, 0, 1);
 
-            await expect(vars.mapCont.connect(vars.addr1).magicAttack(2, 2, 1, 1, 1)).to.be.reverted;
+            await expect(vars.magic_attack.connect(vars.addr1).magicAttack(2, 2, 1, 1, 1)).to.be.reverted;
         });
         it("EdGe CaSeS...", async function () {
             await vars.alcDao.mint(vars.owner.address, 0, 8, "0x");
@@ -136,13 +114,12 @@ describe("ALCX_map", function () {
             await vars.mapCont.redeemNFTsForLand([0],[3]);
             await vars.mapCont.connect(vars.addr1).redeemNFTsForLand([0],[1]);
 
-            await vars.mapCont.magicAttack(0, 2, 1, 2, 1);
-            await vars.mapCont.magicAttack(0, 1, 1, 1, 1);
-            await vars.mapCont.magicAttack(1, 0, 1, 1, 1);
-            await vars.mapCont.magicAttack(2, 0, 1, 1, 1);
-            await expect (vars.mapCont.magicAttack(0, 0, 1, 1, 1)).to.be.reverted;
-            await expect (vars.mapCont.connect(vars.addr1).magicAttack(1, 1, 0, 0, 1)).to.be.reverted;
+            await vars.magic_attack.magicAttack(0, 2, 1, 2, 1);
+            await vars.magic_attack.magicAttack(0, 1, 1, 1, 1);
+            await vars.magic_attack.magicAttack(1, 0, 1, 1, 1);
+            await vars.magic_attack.magicAttack(2, 0, 1, 1, 1);
+            await expect (vars.magic_attack.magicAttack(0, 0, 1, 1, 1)).to.be.reverted;
+            await expect (vars.magic_attack.connect(vars.addr1).magicAttack(1, 1, 0, 0, 1)).to.be.reverted;
         });
     });
-    */
 });

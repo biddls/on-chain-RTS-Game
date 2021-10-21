@@ -6,7 +6,7 @@ import "./interfaces/IERC_1155.sol";
 
 contract DAO_mint {
 //    IERC_1155 public DAO_NFTS;
-    address internal DAO_NFTS_addr;
+    address public DAO_NFTS_addr;
     uint256 public max_amount = 10;
     uint256 public max_id = 4;
     mapping(address => uint256) public max_NFT;
