@@ -4,7 +4,6 @@ require("hardhat-gas-reporter");
 require('hardhat-spdx-license-identifier');
 require("hardhat-interface-generator");
 
-// import {ALCHEMY_API_KEY, ROPSTEN_PRIVATE_KEY} from "key.js";
 const { ALCHEMY_API_KEY, ROPSTEN_PRIVATE_KEY } = require("./key.js");
 
 module.exports = {
