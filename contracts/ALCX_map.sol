@@ -129,84 +129,13 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
         alcDaoNFT.safeTransferFrom(from, to, id, amount, _data);
     }
 
-    /*
-    // magic functions
-    // reinforces land by staking NFTs to protect it
-    function increaseLandsProtection(uint256 _x, uint256 _y, uint256 _amount) external {
-        require(_amount != 0, "can't send 0 NFTs");
-        require(mapNFTs.ownerOf(map[_x][_y].index) == msg.sender, "address doesn't own account");
-
-        _fromToDAONFT(msg.sender, address(this), map[_x][_y].ALCX_DAO_NFT_ID, _amount, "");
-
-        map[_x][_y].NFTProtection += _amount;
-    }
-    */
-    /*
-    // removes NFTs from land
-    function decreaseLandsProtection(uint256 _x, uint256 _y, uint256 _amount) external {
-        require(_amount != 0, "can't send 0 NFTs");
-        require(mapNFTs.ownerOf(map[_x][_y].index) == msg.sender, "address doesn't own account");
-        require(map[_x][_y].NFTProtection >= _amount, "Not enough NFTs on tile");
-
-        _fromToDAONFT(address(this), msg.sender, map[_x][_y].ALCX_DAO_NFT_ID, _amount, "");
-
-        map[_x][_y].NFTProtection -= _amount;
-    }*/
-    /*
-    function magicAttack(uint256 _attackX, uint256 _attackY, uint256 _fromX, uint256 _fromY, uint256 _amount) external {
-//        make sure that defending land boarders the attackers land
-        require(_attackX != _fromX || _attackY != _fromY, "cant attack your self");
-        require(Chebyshev_math.distance(_attackX, _attackY, _fromX, _fromY) == 1, "Too far away");
-
-        // add checks here to make sure the whole map stays connected
-        require(_mapStaysWhole(_attackX, _attackY, _fromX, _fromY), "Cant destroy that as it would separate the map");
-
-        // make sure that attacker has enough NFTs
-        _fromToDAONFT(msg.sender, address(this), map[_attackX][_attackY].ALCX_DAO_NFT_ID, _amount, "");
-        // see who wins
-        // if defender wins subtract protection from attackers force
-        if(_amount < map[_attackX][_attackY].NFTProtection) {
-            // burn all attackers NFTs
-            // burn defenders - attacks NFTs
-
-            // map[_attackX][_attackY].NFTProtection  * 2
-            // this is because we burn all of the defenders and the same amount from the attacker
-            // so just simplify it down to 2 lots the min amount because both sides loose
-
-            // change this to burn eventually
-            _fromToDAONFT(address(this), address(1),
-                map[_attackX][_attackY].ALCX_DAO_NFT_ID,
-                map[_attackX][_attackY].NFTProtection * 2, "");
-
-            // may not burn nfts and instead will sell them for alcx for it to stake in the dao
-
-            // reduce the amount of protection
-            map[_attackX][_attackY].NFTProtection = map[_attackX][_attackY].NFTProtection - _amount;
-        } // if defender looses destroy land and everything on it
-        else {
-            // burn all defenders NFTs
-            // burn attacks - defenders NFTs
-            map[_attackX][_attackY].NFTProtection = 0;
-            // see simplification math above ^^
-            _fromToDAONFT(address(this), address(1),
-                map[_attackX][_attackY].ALCX_DAO_NFT_ID,
-                _amount * 2, "");
-
-            // kill the land
-            require(_mapStaysWhole(_attackX, _attackY, _fromX, _fromY));
-            _killTile(_attackX, _attackY);
-
-        }
-    }
-    */
-
     // checks
     function mapStaysWhole(
         uint256 _x1Removed,
         uint256 _y1Removed,
         uint256 _x2Start,
         uint256 _y2Start
-    ) external returns (bool) {
+    ) external view returns (bool) {
         return _mapStaysWhole(_x1Removed, _y1Removed, _x2Start, _y2Start);
     }
 
@@ -343,6 +272,9 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
     function mapContExternal_NFTProtection(uint256 _x, uint256 _y) external view returns (uint256){
         return (map[_x][_y].NFTProtection);
     }
+    function mapContExternal_lastChange(uint256 _x, uint256 _y) external view returns (uint256){
+        return (map[_x][_y].lastChange);
+    }
     // writing values
     function mapContExternal_ALCX_DAO_NFT_ID_change(uint256 _x, uint256 _y, bool _add, uint256 _amount) external{
         require(hasRole(MAP_CONTROL, msg.sender));
@@ -365,5 +297,9 @@ contract ALCX_map is ERC1155Holder, AccessControlEnumerable{
             require(map[_x][_y].NFTProtection >= _amount);
             map[_x][_y].NFTProtection -= _amount;
         }
+    }
+    function mapContExternal_lastChange(uint256 _x, uint256 _y, uint256 _amount) external{
+        require(hasRole(MAP_CONTROL, msg.sender));
+        map[_x][_y].lastChange = _amount;
     }
 }

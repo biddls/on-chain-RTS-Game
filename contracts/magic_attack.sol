@@ -27,7 +27,6 @@ contract Magic_attack is AccessControl, ERC1155Holder{
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-
     // magic functions
     // reinforces land by staking NFTs to protect it
     function increaseLandsProtection(uint256 _x, uint256 _y, uint256 _amount) external {

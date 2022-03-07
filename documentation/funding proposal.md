@@ -20,9 +20,7 @@ In the future I intend to add with community involvement and feedback:
 6. Creating economic incentives in a play to earn aspect above and beyond rewards from the games accrued ALCX and 
    the voting rights you receive
 7. Any NFTs used in the magic attack can be bought back for ALCX from the game
-8. How to ensure that whales do not ruin the fun for everyone (reputation system; bonding vurve the more you own the 
-   harder it gets)
-9. Make sure its fun and engaging
+8. How to ensure that whales do not ruin the fun for everyone
 
 <h3>What I am asking from the DAO</h3>
 I would like X amount of money to hire a web developer to build out a better website as, although I have tried to 
@@ -32,11 +30,3 @@ make progress on my end I am not very good at react.
 This proposal is just to build out a better looking UI instead of the eyesore that I have currently developed. With 
 a better UI I hope to be able to more effectively communicate the vision and start to generate more involvement and 
 feed back from the community about the game.
-
-<h3>Why this is good for the DAO and the ALCX token holders</h3>
-After a magic attack all the NFTs are sent to the game which it either stakes in the DAO to build a better character 
-for more rewards or they are then sold back to the community for ALCX which is then locked up in the game 
-permanently and sent off to the DAO. This ALCX will never be sold (unless needed for slashing) and the materia 
-shards it generates will be distributed to the players of the game as a reward for playing. Voting in the DAO with 
-the games ALCX will be done by how many map tiles you own, so owning more of the map will grant you more power in 
-the DAO it will be a winner take all scenario in terms of the voting weighting.
